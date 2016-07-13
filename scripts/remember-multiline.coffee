@@ -12,6 +12,7 @@
 #   hubot forget <key> - Remove key from the brain.
 #   hubot list remem[bered] - Show all key value pairs.
 
+HubotSlack = require 'hubot-slack'
 _ = require('lodash')
 
 config = require('hubot-config')('remember-multiline',
@@ -74,9 +75,22 @@ module.exports = (robot) ->
       res.send "ok, and I've forgotten the old value #{oldValue}"
     else
       res.send 'ok'
-
+  
+  # this allows users to tell vlad to REMEMBER keys with white space between " chars
   robot.respond ///#{REMEMBER}\s+(#{[KEY_WSPACE]})\s+is(?:\s|\n)((.|\n)+)$///, (res) ->
-    res.send "triggered"
+    res.finish()
+    key = res.match[1]
+    value = res.match[3]
+    oldValue = get(key)
+    set(key, value)
+    if oldValue?
+      res.send "ok, and I've forgotten the old value #{oldValue}"
+    else
+      res.send 'ok'
+  
+  # this allows bots to tell vlad to REMEMBER keys with white space between " chars
+  regex = ///vlad\s+#{REMEMBER}\s+(#{[KEY_WSPACE]})\s+is(?:\s|\n)((.|\n)+)$///
+  robot.listeners.push new HubotSlack.SlackBotListener robot, regex, (res) ->
     res.finish()
     key = res.match[1]
     value = res.match[3]
@@ -87,8 +101,8 @@ module.exports = (robot) ->
     else
       res.send 'ok'
 
+  # this allows users to tell vlad to FORGET keys with white space between " chars
   robot.respond ///forget\s+(#{KEY_WSPACE})$///, (res) ->
-    res.send "triggered"
     res.finish()
     key = res.match[1]
     value = get(key)
@@ -98,6 +112,18 @@ module.exports = (robot) ->
     else
       res.send "I've alredy forgotten #{key}"
 
+  # this allows bots to tell vlad to FORGET keys with white space between " chars
+  regex = ///vlad\s+forget\s+(#{KEY_WSPACE})$/// 
+  robot.listeners.push new HubotSlack.SlackBotListener robot, regex, (res) ->
+    res.finish()
+    key = res.match[1]
+    value = get(key)
+    del(key)
+    if value?
+      res.send "I've forgotten #{key} is #{value}"
+    else
+      res.send "I've alredy forgotten #{key}"
+ 
   robot.respond ///forget\s+(#{KEY})$///, (res) ->
     res.finish()
     key = res.match[1]
