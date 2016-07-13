@@ -1,20 +1,28 @@
-# Description:
-#   Example scripts for you to examine and try out.
+#Description:
+#   Prints out this month's ASCII calendar.
 #
-# Notes:
-#   They are commented out by default, because most of them are pretty silly and
-#   wouldn't be useful and amusing enough for day to day huboting.
-#   Uncomment the ones you want to try and experiment with.
-#
-#   These are from the scripting documentation: https://github.com/github/hubot/blob/master/docs/scripting.md
+# Commands:
+#   hubot calendar [me] - Print out this month's calendar
 
+#TODO how do i trigger the action to move the fucking file once it has been
+#downloaded?
+#I also don't know how to figure out if it has even finished copying yet.
+#the program will also need to quit once it has finished copying.
 {spawn} = require 'child_process'
-
 module.exports = (robot) ->
 
-  robot.hear /badger/i, (res) ->
-    res.send "BADGERS!" 
+  robot.respond /who/i, (res) ->
+    who = spawn 'who'
+    who.stdout.on 'data', (data) -> res.send data.toString().trim()
+    who.stderr.on 'data', (data) -> res.send data.toString().trim()
   
+  robot.respond /awaken the beast (.*) has been (.*)/i, (res) ->
+    filename = res.match[1]
+    python = spawn 'python', ['scripts/theBeast.py', "#{filename}", process.env.IFTTT_API_KEY]
+    python.stdout.on 'data', (data) -> res.send data.toString().trim()
+    python.stderr.on 'data', (data) -> res.send data.toString().trim()
+    res.send "\nThe darkest part of my mind is reserved to The Beast."
+
   robot.respond /open the (.*) doors/i, (res) ->
     doorType = res.match[1]
     if doorType is "pod bay"
