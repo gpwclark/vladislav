@@ -9,8 +9,13 @@
 #   These are from the scripting documentation: https://github.com/github/hubot/blob/master/docs/scripting.md
 
 {spawn} = require 'child_process'
+HubotSlack = require 'hubot-slack'
 
 module.exports = (robot) ->
+
+  regex = /^(Failed:|Timed out:).*/
+  robot.listeners.push new HubotSlack.SlackBotListener robot, regex, (msg) ->
+      msg.send "blah"
 
   robot.hear /badger/i, (res) ->
     res.send "BADGERS!" 

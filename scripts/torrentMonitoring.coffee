@@ -9,9 +9,12 @@
 #I also don't know how to figure out if it has even finished copying yet.
 #the program will also need to quit once it has finished copying.
 {spawn} = require 'child_process'
+HubotSlack = require 'hubot-slack'
+
 module.exports = (robot) ->
 
-  robot.respond /awaken the beast (.*) has been (.*)/i, (res) ->
+  regex = /awaken the beast (.*) has been (.*)/i
+  robot.listeners.push new HubotSlack.SlackBotListener robot, regex, (res) ->
     filename = res.match[1]
     python = spawn 'python', ['scripts/theBeast.py', "#{filename}", process.env.IFTTT_API_KEY]
     python.stdout.on 'data', (data) -> res.send data.toString().trim()
