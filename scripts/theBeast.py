@@ -21,7 +21,7 @@ import requests
 #           |-> "{{Filename}}" stored in robot-brain
 #       TRIGGERS: vlad awaken the beast {{Filename}} has been uploaded to dropbox.
 #           |-> theBeast.py runs waiting for {{Filename}}
-# 2. EVENT: 
+# 2. EVENT: torrent file appears in /home/emby/movies/torrents/
 #
 #
 #
@@ -31,6 +31,7 @@ class theBeast:
     def __init__(self, m_file, ifttt_api_key):
         self.subsetTolerance = .5
         self.timeToWait = 2160 
+        self.path_to_watch = "/home/emby/movies/torrents/"
         self.m_file = m_file
         self.m_file_as_set = self.stringToSet(m_file)
         self.ifttt_api_key = ifttt_api_key
@@ -68,37 +69,68 @@ class theBeast:
             if (self.isAlmostSubset(elem)):
                 return elem
 
-    def xferFinished(self, dirToMonitor):
+    def xferFinished(self, dir_to_monitor):
         # send cmd for vlad to remem that self.m_file is pending xfer.
-        rememcmd = "remem " + "\"" + dirToMonitor + "\"" + " is pending_xfer"
+        rememcmd = "remem " + "\"" + dir_to_monitor + "\"" + " is pending_xfer"
         payload = {'value1' : rememcmd}
         r = requests.post(self.api_endpoint, data=payload)
         print("remem pending cmd: ", r.status_code,r.reason)
 
-    def waitForXfer(self):
+    def get_size(self, start_path):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(start_path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                total_size += os.path.getsize(fp)
+        return total_size
+
+    def waitForXfer(self, dir_to_monitor):
         # send cmd for vlad to forget that self.m_file was downloading.
         forgetcmd = "forget " + "\"" + self.m_file + "\""
         payload = {'value1': forgetcmd}
         r = requests.post(self.api_endpoint, data=payload)
         print("forget downloading cmd: ", r.status_code, r.reason)
         #TODO WAIT FUNCTIONALITY GOES HERE
+        filepath = self.path_to_watch + dir_to_monitor
+        #TODO turn 60 and 10 into wait_period and non_changing_threshold
+        count = 0
+        same_count = 0
+        before = self.get_size(filepath)
 
+        #TODO need to verify all pahts of this method are traversed
+        while (count < 60):
+            time.sleep(2)
+            after = self.get_size(filepath)
+            if before == after:
+                print("same")
+                same_count = same_count + 1
+                if same_count == 10:
+                    return True
+            else:
+                same_count = 0
+            before = after
+            count = count + 1
+
+
+        if count == 60:
+            payload = {'value1': "theBeast.py: inifinite loop in waitForXfer breakout!"}
+            r = requests.post(self.api_endpoint_talk, data=payload)
+        return False
 
     def monitor(self):
-        path_to_watch = "/home/emby/movies/torrents/"
         fileTransferring = True 
         foundMatch = False
         count = 0
 
-        before = dict ([(f, None) for f in os.listdir (path_to_watch)])
+        before = dict ([(f, None) for f in os.listdir (self.path_to_watch)])
         currLs = [f for f in before]
 
         foundMatch = self.containsFilename(currLs)
         if foundMatch:
             print("I got the match, it was already there ", foundMatch)
             fileTransferring = False
-            self.xferFinished(foundMatch)
-            self.waitForXfer()
+            if self.waitForXfer(foundMatch):
+                self.xferFinished(foundMatch)
 
         # fileTransferring is false when the file is found, and
         # 2160 is the number of 10 second increments that equals
@@ -109,7 +141,7 @@ class theBeast:
         while (fileTransferring and (count < self.timeToWait)):
             count = count + 1
             time.sleep (10)
-            after = dict ([(f, None) for f in os.listdir (path_to_watch)])
+            after = dict ([(f, None) for f in os.listdir (self.path_to_watch)])
             added = [f for f in after if not f in before]
             removed = [f for f in before if not f in after]
 
@@ -120,8 +152,8 @@ class theBeast:
                 if foundMatch:
                     print("I got the match ", foundMatch)
                     fileTransferring = False
-                    self.xferFinished(foundMatch)
-                    self.waitForXfer()
+                    if self.waitForXfer(foundMatch):
+                        self.xferFinished(foundMatch)
             if removed: 
                 removedStr = "Removed: ", ", ".join (removed)
                 payload = {'value1': removedStr}
@@ -138,7 +170,8 @@ class theBeast:
 
 if __name__ == "__main__":
     beast = theBeast(m_file=sys.argv[1],ifttt_api_key=sys.argv[2])
-    beast.monitor()
+    #beast.monitor()
+    beast.waitForXfer("francis")
 
 # Original monitoring script: http://timgolden.me.uk/python/win32_how_do_i/watch_directory_for_changes.html
 #import os, time

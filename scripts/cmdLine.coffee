@@ -2,7 +2,9 @@
 #   Prints out this month's ASCII calendar.
 #
 # Commands:
-#   hubot calendar [me] - Print out this month's calendar
+#   hubot who - reports who is logged in to server
+#   hubot ls - lists contents of /home/emby/movies/torrents
+#   hubot ls  -l - lists contents of /home/emby/movies/torrents
 
 {spawn} = require 'child_process'
 module.exports = (robot) ->
