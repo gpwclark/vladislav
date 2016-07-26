@@ -65,7 +65,6 @@ class theBeast:
         
     def containsFilename(self, added):
         for elem in added:
-            print ("the elem: ")
             if (self.isAlmostSubset(elem)):
                 return elem
 
@@ -97,12 +96,11 @@ class theBeast:
         same_count = 0
         before = self.get_size(filepath)
 
-        #TODO need to verify all pahts of this method are traversed
+        #TODO need to verify all paths of this method are traversed
         while (count < 60):
             time.sleep(2)
             after = self.get_size(filepath)
             if before == after:
-                print("same")
                 same_count = same_count + 1
                 if same_count == 10:
                     return True
@@ -146,19 +144,12 @@ class theBeast:
             removed = [f for f in before if not f in after]
 
             if added:
-                addedStr = "Added: ", ", ".join (added)
-                print(addedStr)
                 foundMatch = self.containsFilename(added)
                 if foundMatch:
                     print("I got the match ", foundMatch)
                     fileTransferring = False
                     if self.waitForXfer(foundMatch):
                         self.xferFinished(foundMatch)
-            if removed: 
-                removedStr = "Removed: ", ", ".join (removed)
-                payload = {'value1': removedStr}
-                r = requests.post(self.api_endpoint, data=payload)
-                print(r.status_code, r.reason)
             before = after
 
         if (count == self.timeToWait):
