@@ -10,7 +10,7 @@
 module.exports = (robot) ->
 
   robot.respond /who/i, (res) ->
-    res.send "Okay, we're just about to walk passed some werewolves so some shit might go down!"
+    res.send "Okay, we're just about to walk past some werewolves so some shit might go down!"
     who = spawn 'who'
     who.stdout.on 'data', (data) -> res.send data.toString().trim()
     who.stderr.on 'data', (data) -> res.send data.toString().trim()
@@ -21,7 +21,7 @@ module.exports = (robot) ->
     ls.stdout.on 'data', (data) -> res.send data.toString().trim()
     ls.stderr.on 'data', (data) -> res.send data.toString().trim()
     res.send "It's sunlight!"
-    
+
 
   robot.respond /ls -l/i, (res) ->
     res.send "Our friend had just been killed in a fatal sunlight accident."
