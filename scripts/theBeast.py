@@ -16,23 +16,24 @@ import requests
 #################################### order ####################################
 ###############################################################################
 #
-# 1.EVENT: torrent file uploaded to dropbox
-#       TRIGGERS: vlad remem "{{Filename}}" is downloading
-#           |-> "{{Filename}}" stored in robot-brain
-#       TRIGGERS: vlad awaken the beast {{Filename}} has been uploaded to dropbox.
-#           |-> theBeast.py runs waiting for {{Filename}}
-# 2. EVENT: torrent file appears in /home/emby/movies/torrents/
-#       TRIGGERS:
-#
+#1.Torrent file uploaded to dropbox, IFTTT bot tells vlad:
+#       "vlad awaken the beast {{Filename}} has been uploaded to dropbox."
+#  theBeast.py tells vlad to remember that {{Filename}} is currently downloading
+#  and then it runs on the server waiting for {{Filename}} to appear in the
+#  self.path_to_watch_ directory.
+#2.
 #
 #TODO make sure we send slack messages if something goes poorly.
 
 class theBeast:
     def __init__(self, m_file, ifttt_api_key, path_to_watch):
         self.subset_tolerance = .5
+        self.num_obs_no_delta = 10
         self.time_to_wait = 2160
         self.path_to_watch = path_to_watch
         self.m_file = m_file
+        self.max_xfer_wait_count = 180
+        self.sleep_time = 20
         self.m_file_as_set = self.stringToSet(m_file)
         self.ifttt_api_key = ifttt_api_key
         self.api_endpoint = "https://maker.ifttt.com/trigger/torrent_ready/with/key/" + self.ifttt_api_key
@@ -100,14 +101,17 @@ class theBeast:
         same_count = 0
         before = self.get_size(filepath)
 
+
         #TODO need to verify all paths of this method are traversed
-        while (count < 60):
+        # this loop is monitoring a file/folder that is either xferring
+        # or has xferred. It waits for max_xfer_wait_count * sleep_time
+        while (count < self.max_xfer_wait_count):
             print("before: ", before)
-            time.sleep(20)
+            time.sleep(self.sleep_time)
             after = self.get_size(filepath)
             if before == after:
                 same_count = same_count + 1
-                if same_count == 10:
+                if same_count == self.num_obs_no_delta:
                     return True
             else:
                 print("change")
@@ -170,17 +174,3 @@ if __name__ == "__main__":
             ifttt_api_key = sys.argv[2],
             path_to_watch = sys.argv[3])
     beast.monitor()
-    #beast.waitForXfer("francis blah")
-
-# Original monitoring script: http://timgolden.me.uk/python/win32_how_do_i/watch_directory_for_changes.html
-#import os, time
-#path_to_watch = "."
-#before = dict ([(f, None) for f in os.listdir (path_to_watch)])
-#while 1:
-  #time.sleep (10)
-  #after = dict ([(f, None) for f in os.listdir (path_to_watch)])
-  #added = [f for f in after if not f in before]
-  #removed = [f for f in before if not f in after]
-  #if added: print "Added: ", ", ".join (added)
-  #if removed: print "Removed: ", ", ".join (removed)
-  #before = after
