@@ -23,7 +23,9 @@ import requests
 #  self.path_to_watch_ directory.
 #2.
 #
-#TODO make sure we send slack messages if something goes poorly.
+#TODO we need logs badly. And maybe a post on the channel if something goes 
+#     wrong?
+#TODO WORRY ABOUT PEOPLE REQUESTING STUFF THAT ALREADY EXISTS.
 
 class theBeast:
     def __init__(self, m_file, ifttt_api_key, path_to_watch):
@@ -40,6 +42,31 @@ class theBeast:
         self.api_endpoint_talk = "https://maker.ifttt.com/trigger/talk_to_vlad/with/key/" + self.ifttt_api_key
         payload = {'value1': "vlad remem " + "\"" + self.m_file + "\"" + " is downloading"}
         r = requests.post(self.api_endpoint_talk, data=payload)
+
+
+    # if transferring a show should be tv_shows.....<name_of_show>
+    #   -> since all shows just go in same directory and always have
+    #      the proper naming convention that problem solves itself.
+    #      the issue here is its possible the directory already exists,
+    #      and it is also possible the file already exists.
+
+    def moveMusic(self):
+        print()
+    
+    def moveMovie(self):
+        print()
+
+    def moveBook(self):
+        print()
+
+    def moveTvshow(self):
+        print()
+
+    def xferFinished(self, fileName):
+        # TODO
+        # Decide what type of media this is and then dispatch it to the
+        # proper method.
+        return fileName
 
     def stringToSet(self, string):
         tokenSet = set()
@@ -69,24 +96,17 @@ class theBeast:
             if (self.isAlmostSubset(elem)):
                 return elem
 
-    def xferFinished(self, dir_to_monitor):
-        # send cmd for vlad to remem that self.m_file is pending xfer.
-        rememcmd = "remem " + "\"" + dir_to_monitor + "\"" + " is pending_xfer"
-        payload = {'value1' : rememcmd}
-        r = requests.post(self.api_endpoint, data=payload)
-        print("remem pending cmd: ", r.status_code,r.reason)
-
     def get_size(self, filePath):
         total_size = os.path.getsize(filePath)
-        if os.path.isfile(filePath):
-            return total_size
-        else:
-            for item in os.listdir(filePath):
-                itempath = os.path.join(filePath, item)
-                if os.path.isfile(itempath):
-                    total_size += os.path.getsize(itempath)
-                elif os.path.isdir(itempath):
-                    total_size += self.get_size(itempath)
+      if os.path.isfile(filePath):
+          return total_size
+      else:
+          for item in os.listdir(filePath):
+              itempath = os.path.join(filePath, item)
+          if os.path.isfile(itempath):
+              total_size += os.path.getsize(itempath)
+          elif os.path.isdir(itempath):
+              total_size += self.get_size(itempath)
         return total_size
 
     def waitForXfer(self, dir_to_monitor):
@@ -94,7 +114,7 @@ class theBeast:
         forgetcmd = "forget " + "\"" + self.m_file + "\""
         payload = {'value1': forgetcmd}
         r = requests.post(self.api_endpoint, data=payload)
-        print("forget downloading cmd: ", r.status_code, r.reason)
+        #print("forget downloading cmd: ", r.status_code, r.reason)
         filepath = self.path_to_watch + dir_to_monitor
         #TODO turn 60 and 10 into wait_period and non_changing_threshold
         count = 0
@@ -106,7 +126,7 @@ class theBeast:
         # this loop is monitoring a file/folder that is either xferring
         # or has xferred. It waits for max_xfer_wait_count * sleep_time
         while (count < self.max_xfer_wait_count):
-            print("before: ", before)
+            #print("before: ", before)
             time.sleep(self.sleep_time)
             after = self.get_size(filepath)
             if before == after:
@@ -114,7 +134,7 @@ class theBeast:
                 if same_count == self.num_obs_no_delta:
                     return True
             else:
-                print("change")
+                #print("change")
                 same_count = 0
             before = after
             count = count + 1
@@ -125,6 +145,20 @@ class theBeast:
             r = requests.post(self.api_endpoint_talk, data=payload)
         return False
 
+# There are a couple steps to monitor() because of the way the servers are
+# configured. Torrents are downloaded on a different computer than where
+# this script is run. On that computer, I'm using autotools to copy the
+# downloaded file to a folder on it's hard drive (~/emby_mount) that is
+# connected to the self.path_to_watch folder on ~this~ computer with sshfs.
+# so when "foundMatch" becomes True in this script it is because the file
+# appeared in the self.path_to_watch folder. However, since it is
+# connected with sshfs, it is actually being transferred, that is why
+# we have the waitForXfer method that monitors the file size until it
+# hasn't changed in a given amount of time. The last step is just to 
+# transfer the file where it needs to go which is what the xferFinished
+# method is responsible for doing. It looks at the type of torrent and
+# dispatches it to the appropriate move method, which just call a bash
+# script.
     def monitor(self):
         fileTransferring = True
         foundMatch = False
@@ -135,7 +169,7 @@ class theBeast:
 
         foundMatch = self.containsFilename(currLs)
         if foundMatch:
-            print("I got the match, it was already there ", foundMatch)
+            #print("I got the match, it was already there ", foundMatch)
             fileTransferring = False
             if self.waitForXfer(foundMatch):
                 self.xferFinished(foundMatch)
@@ -145,7 +179,7 @@ class theBeast:
         # 6 hours, which is as long as I want this script to
         # wait. After 12 hours that file is probably not coming.
 
-        print ("monitoring")
+        #print ("monitoring")
         while (fileTransferring and (count < self.time_to_wait)):
             count = count + 1
             time.sleep (10)
@@ -156,7 +190,7 @@ class theBeast:
             if added:
                 foundMatch = self.containsFilename(added)
                 if foundMatch:
-                    print("I got the match ", foundMatch)
+                    #print("I got the match ", foundMatch)
                     fileTransferring = False
                     if self.waitForXfer(foundMatch):
                         self.xferFinished(foundMatch)
