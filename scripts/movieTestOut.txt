@@ -1,0 +1,11 @@
+movieTest
+├── movies
+│   ├── filetest
+│   │   └── fakemovie_file
+│   ├── normaltest
+│   │   └── fakemovie_file
+│   └── rartest
+│       └── fakemovie_file
+└── torrents
+
+5 directories, 3 files
